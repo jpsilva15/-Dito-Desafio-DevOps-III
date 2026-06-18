@@ -30,8 +30,11 @@ defaults:
 
 jobs:
   validate:
-    name: Validação (fmt + validate)
+    name: Validação → ${{ matrix.environment }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [staging, production]
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -48,8 +51,8 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Terraform Init (staging)
-        run: terraform init -backend-config=backend-staging.hcl
+      - name: Terraform Init
+        run: terraform init -backend-config=backend-${{ matrix.environment }}.hcl
 
       - name: Terraform Format Check
         run: terraform fmt -check -recursive
