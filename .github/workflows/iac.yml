@@ -32,6 +32,7 @@ jobs:
     name: Validação → ${{ matrix.environment }}
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         environment: [staging, production]
     steps:
