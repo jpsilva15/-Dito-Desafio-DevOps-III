@@ -158,74 +158,74 @@ jobs:
           path: IaC/tfplan-production
           retention-days: 1
 
-  # apply-staging:
-  #   name: Apply → staging
-  #   runs-on: ubuntu-latest
-  #   needs: plan-staging
-  #   if: |
-  #     (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-  #     (github.event_name == 'workflow_dispatch' && inputs.environment == 'staging')
-  #   environment: staging
-  #   steps:
-  #     - name: Checkout Code
-  #       uses: actions/checkout@v4
+  apply-staging:
+    name: Apply → staging
+    runs-on: ubuntu-latest
+    needs: plan-staging
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && inputs.environment == 'staging')
+    environment: staging
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-  #     - name: Setup Terraform
-  #       uses: hashicorp/setup-terraform@v3
-  #       with:
-  #         terraform_version: ${{ env.TF_VERSION }}
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
 
-  #     - name: Configure AWS Credentials
-  #       uses: aws-actions/configure-aws-credentials@v4
-  #       with:
-  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: ${{ secrets.AWS_REGION }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-  #     - name: Terraform Init
-  #       run: terraform init -backend-config=backend-staging.hcl
+      - name: Terraform Init
+        run: terraform init -backend-config=backend-staging.hcl
 
-  #     - name: Download tfplan-staging
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: tfplan-staging
-  #         path: IaC
+      - name: Download tfplan-staging
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-staging
+          path: IaC
 
-  #     - name: Terraform Apply
-  #       run: terraform apply -auto-approve -parallelism=1 tfplan-staging
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -parallelism=1 tfplan-staging
 
-  # apply-production:
-  #   name: Apply → production
-  #   runs-on: ubuntu-latest
-  #   needs: [apply-staging, plan-production]
-  #   if: |
-  #     (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-  #     (github.event_name == 'workflow_dispatch' && inputs.environment == 'production')
-  #   environment: production
-  #   steps:
-  #     - name: Checkout Code
-  #       uses: actions/checkout@v4
+  apply-production:
+    name: Apply → production
+    runs-on: ubuntu-latest
+    needs: [apply-staging, plan-production]
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && inputs.environment == 'production')
+    environment: production
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-  #     - name: Setup Terraform
-  #       uses: hashicorp/setup-terraform@v3
-  #       with:
-  #         terraform_version: ${{ env.TF_VERSION }}
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
 
-  #     - name: Configure AWS Credentials
-  #       uses: aws-actions/configure-aws-credentials@v4
-  #       with:
-  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: ${{ secrets.AWS_REGION }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-  #     - name: Terraform Init
-  #       run: terraform init -backend-config=backend-production.hcl
+      - name: Terraform Init
+        run: terraform init -backend-config=backend-production.hcl
 
-  #     - name: Download tfplan-production
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: tfplan-production
-  #         path: IaC
+      - name: Download tfplan-production
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-production
+          path: IaC
 
-  #     - name: Terraform Apply
-  #       run: terraform apply -auto-approve -parallelism=1 tfplan-production
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -parallelism=1 tfplan-production
