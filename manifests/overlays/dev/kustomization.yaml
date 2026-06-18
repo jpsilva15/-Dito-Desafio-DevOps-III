@@ -1,0 +1,31 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+
+namePrefix: dev-
+
+patches:
+- patch: |-
+    - op: replace
+      path: /spec/replicas
+      value: 1
+  target:
+    kind: Deployment
+    name: go-app
+- patch: |-
+    - op: replace
+      path: /spec/minReplicas
+      value: 1
+    - op: replace
+      path: /spec/maxReplicas
+      value: 3
+  target:
+    kind: HorizontalPodAutoscaler
+    name: go-app-hpa
+
+images:
+- name: go-app
+  newName: 009681539888.dkr.ecr.us-east-1.amazonaws.com/dito-demo
+  newTag: 9e86ee873f43cef079f75b598641516a00de61de
+resources:
+- ../../base

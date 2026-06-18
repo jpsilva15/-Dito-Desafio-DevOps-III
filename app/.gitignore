@@ -1,0 +1,17 @@
+# Binários
+server
+myapp
+*.exe
+
+# Build output
+/dist/
+
+# Ambiente local
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
