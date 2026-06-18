@@ -8,14 +8,14 @@ patches:
 - patch: |-
     - op: replace
       path: /spec/replicas
-      value: 1
+      value: 2
   target:
     kind: Deployment
     name: go-app
 - patch: |-
     - op: replace
       path: /spec/minReplicas
-      value: 1
+      value: 2
     - op: replace
       path: /spec/maxReplicas
       value: 3
