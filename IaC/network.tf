@@ -11,7 +11,7 @@ module "vpc" {
   database_subnets = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 52)]
 
   enable_nat_gateway = true
-  single_nat_gateway = true # use false em produção (um NAT por AZ)
+  single_nat_gateway = var.single_nat_gateway
 
   create_database_subnet_group           = true
   create_database_subnet_route_table     = true

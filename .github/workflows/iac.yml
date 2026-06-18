@@ -38,9 +38,8 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Terraform Init
-        run: |
-          terraform init
+      - name: Terraform Init (staging)
+        run: terraform init -backend-config=backend-staging.hcl
 
       - name: Terraform Format Check
         run: terraform fmt -check -recursive
@@ -48,11 +47,11 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
-  plan:
-    name: Terraform Plan
+  plan-staging:
+    name: Plan → staging
     runs-on: ubuntu-latest
     needs: validate
-    steps:      
+    steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
@@ -69,27 +68,24 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Terraform Init
-        run: |
-          terraform init
+        run: terraform init -backend-config=backend-staging.hcl
 
       - name: Terraform Plan
-        id: plan
-        run: terraform plan -no-color -out=tfplan 2>&1 | tee plan.txt
+        run: terraform plan -var-file=staging.tfvars -no-color -out=tfplan-staging 2>&1 | tee plan-staging.txt
         continue-on-error: true
 
-      - name: Upload tfplan
+      - name: Upload tfplan-staging
         uses: actions/upload-artifact@v4
         with:
-          name: tfplan
-          path: IaC/tfplan
+          name: tfplan-staging
+          path: IaC/tfplan-staging
           retention-days: 1
 
-  apply:
-    name: Terraform Apply
+  plan-production:
+    name: Plan → production
     runs-on: ubuntu-latest
-    needs: plan
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    steps:      
+    needs: validate
+    steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
@@ -106,14 +102,83 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Terraform Init
-        run: |
-          terraform init
+        run: terraform init -backend-config=backend-production.hcl
 
-      - name: Download tfplan
+      - name: Terraform Plan
+        run: terraform plan -var-file=production.tfvars -no-color -out=tfplan-production 2>&1 | tee plan-production.txt
+        continue-on-error: true
+
+      - name: Upload tfplan-production
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-production
+          path: IaC/tfplan-production
+          retention-days: 1
+
+  apply-staging:
+    name: Apply → staging
+    runs-on: ubuntu-latest
+    needs: plan-staging
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: staging
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Init
+        run: terraform init -backend-config=backend-staging.hcl
+
+      - name: Download tfplan-staging
         uses: actions/download-artifact@v4
         with:
-          name: tfplan
+          name: tfplan-staging
           path: IaC
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve -parallelism=1 tfplan
+        run: terraform apply -auto-approve -parallelism=1 tfplan-staging
+
+  apply-production:
+    name: Apply → production
+    runs-on: ubuntu-latest
+    needs: apply-staging
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Init
+        run: terraform init -backend-config=backend-production.hcl
+
+      - name: Download tfplan-production
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-production
+          path: IaC
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -parallelism=1 tfplan-production

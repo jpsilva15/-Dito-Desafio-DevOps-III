@@ -31,7 +31,7 @@ module "db" {
   engine_version       = "16"
   family               = "postgres16"
   major_engine_version = "16"
-  instance_class       = "db.t4g.micro"
+  instance_class       = var.rds_instance_class
 
   allocated_storage     = 20
   max_allocated_storage = 100
@@ -43,16 +43,16 @@ module "db" {
   # Senha gerada e rotacionada automaticamente pelo AWS Secrets Manager
   manage_master_user_password = true
 
-  multi_az               = false
+  multi_az               = var.rds_multi_az
   db_subnet_group_name   = module.vpc.database_subnet_group_name
   vpc_security_group_ids = [module.db_sg.security_group_id]
 
   maintenance_window      = "Mon:00:00-Mon:03:00"
   backup_window           = "03:00-06:00"
-  backup_retention_period = 0 # desabilita backups automáticos em dev (save ~$2/mês em storage)
+  backup_retention_period = var.rds_backup_retention_period
 
   skip_final_snapshot          = true
-  deletion_protection          = false
+  deletion_protection          = var.rds_deletion_protection
   performance_insights_enabled = false
   monitoring_interval          = 0
 

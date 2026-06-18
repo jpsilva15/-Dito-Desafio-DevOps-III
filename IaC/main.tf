@@ -30,18 +30,13 @@ module "eks" {
     spot = {
       ami_type = "AL2023_x86_64_STANDARD"
 
-      instance_types = [
-        "t3.medium",
-        "t3a.medium",
-        "t3.large",
-        "t3a.large",
-      ]
+      instance_types = var.eks_node_instance_types
 
       capacity_type = "SPOT"
 
-      min_size     = 1
-      max_size     = 3
-      desired_size = 1
+      min_size     = var.eks_node_min_size
+      max_size     = var.eks_node_max_size
+      desired_size = var.eks_node_desired_size
 
       labels = {
         "capacity-type" = "spot"
