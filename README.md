@@ -83,7 +83,42 @@ kustomize build manifests/overlays/staging
 kustomize build manifests/overlays/production
 ```
 
-Os manifests são aplicados automaticamente pelo pipeline de app — commits na `main` com mudanças em `app/**` atualizam o overlay e o cluster via GitOps.
+### ArgoCD (GitOps controller)
+
+O ArgoCD deve ser instalado no cluster **após** o primeiro `terraform apply`. Ele é responsável por sincronizar o cluster com o estado declarado em `manifests/`.
+
+**1. Instalar o ArgoCD no cluster**
+
+```bash
+kubectl create namespace argocd
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+kubectl wait --for=condition=available deployment/argocd-server -n argocd --timeout=120s
+```
+
+**2. Registrar as Applications**
+
+```bash
+kubectl apply -f manifests/argocd/staging.yaml
+kubectl apply -f manifests/argocd/production.yaml
+```
+
+**3. Acessar a UI (port-forward local)**
+
+```bash
+kubectl port-forward svc/argocd-server -n argocd 8080:443
+# senha inicial:
+kubectl get secret argocd-initial-admin-secret -n argocd \
+  -o jsonpath="{.data.password}" | base64 -d
+```
+
+**Comportamento por ambiente**
+
+| Ambiente | Sync | Comportamento |
+|---|---|---|
+| `staging` | Automático | Qualquer commit em `main` que altere `manifests/overlays/staging` é aplicado imediatamente (`prune: true`, `selfHeal: true`) |
+| `production` | Manual | ArgoCD detecta drift mas não aplica. Requer `argocd app sync dito-demo-production` ou clique em **Sync** na UI |
+
+O pipeline de app (`app.yml`) commita a nova tag da imagem nos overlays via `kustomize edit set image`. O ArgoCD detecta o commit e sincroniza — staging automaticamente, production sob demanda.
 
 ---
 
@@ -146,14 +181,6 @@ O Terraform não permite variáveis no bloco `backend`. A solução padrão é p
 ---
 
 ## Riscos e limitações conhecidas
-
-**Sem controller GitOps ativo**: o pipeline commita nos overlays mas não há ArgoCD ou FluxCD instalado no cluster para aplicar as mudanças. O estado real do cluster pode divergir do repositório sem que ninguém seja notificado.
-
-**EKS API server público**: `endpoint_public_access = true` expõe a API do Kubernetes à internet. Qualquer credencial comprometida pode ser usada de qualquer IP. Em produção restringiria para os IPs do escritório e do runner de CI via `endpoint_public_access_cidrs`.
-
-**Credenciais AWS de longa duração no CI**: `AWS_ACCESS_KEY_ID` e `AWS_SECRET_ACCESS_KEY` como GitHub Secrets são credenciais que não expiram. Um vazamento em logs ou em um fork malicioso seria crítico.
-
-**Nodes SPOT podem ser interrompidos**: com `minReplicas: 2` e `topologySpreadConstraints`, a interrupção de um node derruba metade da capacidade antes do autoscaler reagir (~2 min). Workloads com SLA alto precisariam de ON_DEMAND como fallback.
 
 **`skip_final_snapshot = true` em production**: se `terraform destroy` for executado em production por engano, o banco é destruído sem snapshot. Nenhum `deletion_protection = true` protege contra um `destroy -auto-approve` direto.
 
